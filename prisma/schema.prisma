@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+enum ScheduleStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+  DELAYED
+}
+
+enum CostType {
+  BUDGET
+  ACTUAL
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING_SIGNATURE
+  SIGNED
+  EXPIRED
+}
+
+enum PermitStatus {
+  NOT_STARTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum MaintenanceStatus {
+  PENDING
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AttachmentEntity {
+  QUOTATION
+  INVOICE
+  CONTRACT
+  DRAWING
+  PERMIT
+  MAINTENANCE
+  PROJECT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+
+  maintenanceAssigned MaintenanceItem[] @relation("MaintenanceAssignee")
+  scheduleAssigned    ScheduleItem[]    @relation("ScheduleAssignee")
+  attachments         Attachment[]
+}
+
+model Project {
+  id        String        @id @default(cuid())
+  name      String
+  location  String?
+  status    ProjectStatus @default(PLANNING)
+  address   String?
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  scheduleItems    ScheduleItem[]
+  costEntries      CostEntry[]
+  quotations       Quotation[]
+  invoices         Invoice[]
+  contracts        Contract[]
+  drawings         DesignDrawing[]
+  permits          WorkPermit[]
+  maintenanceItems MaintenanceItem[]
+}
+
+model ScheduleItem {
+  id          String         @id @default(cuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      ScheduleStatus @default(NOT_STARTED)
+  assigneeId  String?
+  assignee    User?          @relation("ScheduleAssignee", fields: [assigneeId], references: [id])
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+}
+
+model CostEntry {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category    String
+  description String?
+  type        CostType
+  amount      Decimal  @db.Decimal(14, 2)
+  date        DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Quotation {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  quotationNo String
+  title       String
+  amount      Decimal         @db.Decimal(14, 2)
+  status      QuotationStatus @default(DRAFT)
+  issueDate   DateTime?
+  validUntil  DateTime?
+  createdAt   DateTime        @default(now())
+  attachments Attachment[]
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invoiceNo  String
+  amount     Decimal       @db.Decimal(14, 2)
+  status     InvoiceStatus @default(UNPAID)
+  issueDate  DateTime?
+  dueDate    DateTime?
+  paidDate   DateTime?
+  createdAt  DateTime      @default(now())
+  attachments Attachment[]
+}
+
+model Contract {
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contractNo   String?
+  title        String
+  counterparty String?
+  value        Decimal?       @db.Decimal(14, 2)
+  signDate     DateTime?
+  status       ContractStatus @default(DRAFT)
+  createdAt    DateTime       @default(now())
+  attachments  Attachment[]
+}
+
+model DesignDrawing {
+  id         String       @id @default(cuid())
+  projectId  String
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title      String
+  discipline String?
+  revision   String?
+  uploadDate DateTime     @default(now())
+  attachments Attachment[]
+}
+
+model WorkPermit {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  permitType    String
+  permitNo      String?
+  status        PermitStatus @default(NOT_STARTED)
+  submittedDate DateTime?
+  approvedDate  DateTime?
+  expiryDate    DateTime?
+  createdAt     DateTime     @default(now())
+  attachments   Attachment[]
+}
+
+model MaintenanceItem {
+  id            String              @id @default(cuid())
+  projectId     String
+  project       Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  status        MaintenanceStatus   @default(PENDING)
+  priority      MaintenancePriority @default(MEDIUM)
+  reportedDate  DateTime            @default(now())
+  dueDate       DateTime?
+  completedDate DateTime?
+  assigneeId    String?
+  assignee      User?               @relation("MaintenanceAssignee", fields: [assigneeId], references: [id])
+  createdAt     DateTime            @default(now())
+  attachments   Attachment[]
+}
+
+model Attachment {
+  id         String           @id @default(cuid())
+  fileName   String
+  url        String
+  entityType AttachmentEntity
+  quotationId String?
+  quotation   Quotation? @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  invoiceId   String?
+  invoice     Invoice?   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  contractId  String?
+  contract    Contract?  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  drawingId   String?
+  drawing     DesignDrawing? @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  permitId    String?
+  permit      WorkPermit? @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  maintenanceId String?
+  maintenance MaintenanceItem? @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  uploadedAt   DateTime @default(now())
+}
