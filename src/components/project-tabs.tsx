@@ -9,6 +9,7 @@ const TABS = [
   { href: "/schedule", label: "Schedule" },
   { href: "/progress", label: "Progress" },
   { href: "/costing", label: "Costing" },
+  { href: "/pnl", label: "P&L" },
   { href: "/quotations", label: "Quotations" },
   { href: "/invoices", label: "Invoices" },
   { href: "/contracts", label: "Contracts" },

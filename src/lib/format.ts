@@ -27,6 +27,11 @@ export function toDateInputValue(date: Date | string | null | undefined): string
   return d.toISOString().slice(0, 10);
 }
 
+export function formatPercent(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return "-";
+  return `${value.toFixed(1)}%`;
+}
+
 export function daysUntil(date: Date | string | null | undefined): number | null {
   if (!date) return null;
   const d = typeof date === "string" ? new Date(date) : date;
