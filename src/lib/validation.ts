@@ -11,6 +11,13 @@ export const optionalAmount = z.preprocess(
   emptyToUndef,
   z.coerce.number().min(0).optional()
 );
+export const optionalEmail = z.preprocess(
+  emptyToUndef,
+  z
+    .string()
+    .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Invalid email address")
+    .optional()
+);
 
 export const projectSchema = z.object({
   name: requiredString,
@@ -20,6 +27,7 @@ export const projectSchema = z.object({
   startDate: optionalDate,
   endDate: optionalDate,
   notes: optionalString,
+  clientEmail: optionalEmail,
 });
 
 export const scheduleItemSchema = z.object({

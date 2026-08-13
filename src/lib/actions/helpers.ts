@@ -6,6 +6,12 @@ export async function requireUser() {
   return session.user;
 }
 
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") throw new Error("Admin access required");
+  return user;
+}
+
 export function formToObject(formData: FormData): Record<string, string> {
   const obj: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {

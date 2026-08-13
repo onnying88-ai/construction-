@@ -1,8 +1,12 @@
 # Construction Tracker
 
 A web app for tracking Top Toy fit-out projects: schedule, costing, quotations,
-invoices, contracts, design drawings, work permits, and pending maintenance —
-one place per project, shared by the team.
+invoices, contracts, design drawings, work permits, pending maintenance, and
+site progress updates — one place per project, shared by the team.
+
+**Access control:** Quotations, Invoices, and Contracts are admin-only (both
+the tab and the underlying server actions). Schedule, Progress, Costing,
+Drawings, Permits, and Maintenance are open to any logged-in team member.
 
 ## Stack
 
@@ -11,6 +15,9 @@ one place per project, shared by the team.
 - NextAuth (Auth.js) v5, email/password (credentials)
 - Vercel Blob for file attachments (falls back to local disk storage when no
   `BLOB_READ_WRITE_TOKEN` is set, e.g. in local dev)
+- Resend for emailing PDF progress reports to clients (`pdf-lib` generates the
+  PDF); report sending is disabled with a clear error until `RESEND_API_KEY`
+  is set
 
 ## Local development
 
@@ -50,17 +57,22 @@ share the connection details and I can help wire everything up.
 2. **File storage — [Vercel Blob](https://vercel.com/docs/storage/vercel-blob):**
    from your Vercel project, add a Blob store and copy the generated
    `BLOB_READ_WRITE_TOKEN`.
-3. **Hosting — [Vercel](https://vercel.com):** import this repository (push it
-   to GitHub first), set the three environment variables from `.env.example`
+3. **Email — [Resend](https://resend.com):** create a free account, copy an
+   API key into `RESEND_API_KEY`. Sending works immediately from
+   `onboarding@resend.dev` (set as the default `EMAIL_FROM`) for testing;
+   verify your own domain in Resend before relying on it for real client
+   emails.
+4. **Hosting — [Vercel](https://vercel.com):** import this repository (push it
+   to GitHub first), set the environment variables from `.env.example`
    in the Vercel project settings, and deploy.
-4. After the first deploy, run the migration and seed against the production
+5. After the first deploy, run the migration and seed against the production
    database once (locally, with `DATABASE_URL` pointed at Neon):
 
    ```bash
    npx prisma migrate deploy
    npm run db:seed
    ```
-5. Log in with the seeded admin account and change the temporary password
+6. Log in with the seeded admin account and change the temporary password
    (there's no self-service password change yet — ask to add one, or update
    it directly via `npx prisma studio` in the meantime).
 

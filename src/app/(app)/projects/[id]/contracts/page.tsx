@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { AccessDenied } from "@/components/access-denied";
 import { createContract, updateContract, deleteContract } from "@/lib/actions/contracts";
 import { StatusBadge } from "@/components/status-badge";
 import { CONTRACT_STATUS } from "@/lib/status";
@@ -74,6 +76,10 @@ function ContractFields({ item }: { item?: Contract }) {
 
 export default async function ContractsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return <AccessDenied module="Contracts" />;
+  }
   const items = await prisma.contract.findMany({
     where: { projectId },
     include: { attachments: true },

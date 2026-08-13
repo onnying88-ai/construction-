@@ -95,19 +95,21 @@ model User {
   maintenanceAssigned MaintenanceItem[] @relation("MaintenanceAssignee")
   scheduleAssigned    ScheduleItem[]    @relation("ScheduleAssignee")
   attachments         Attachment[]
+  progressUpdates     ProgressUpdate[]  @relation("ProgressUpdateCreator")
 }
 
 model Project {
-  id        String        @id @default(cuid())
-  name      String
-  location  String?
-  status    ProjectStatus @default(PLANNING)
-  address   String?
-  startDate DateTime?
-  endDate   DateTime?
-  notes     String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  name        String
+  location    String?
+  status      ProjectStatus @default(PLANNING)
+  address     String?
+  startDate   DateTime?
+  endDate     DateTime?
+  notes       String?
+  clientEmail String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   scheduleItems    ScheduleItem[]
   costEntries      CostEntry[]
@@ -117,6 +119,19 @@ model Project {
   drawings         DesignDrawing[]
   permits          WorkPermit[]
   maintenanceItems MaintenanceItem[]
+  progressUpdates  ProgressUpdate[]
+}
+
+model ProgressUpdate {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  photoUrl    String
+  fileName    String
+  caption     String?
+  createdById String?
+  createdBy   User?    @relation("ProgressUpdateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
 }
 
 model ScheduleItem {

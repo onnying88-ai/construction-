@@ -119,6 +119,17 @@ export default async function ProjectOverviewPage({
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" name="notes" rows={4} defaultValue={project.notes ?? ""} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientEmail">Client email</Label>
+                <Input
+                  id="clientEmail"
+                  name="clientEmail"
+                  type="email"
+                  placeholder="client@example.com"
+                  defaultValue={project.clientEmail ?? ""}
+                />
+                <p className="text-xs text-muted-foreground">Used to email progress reports.</p>
+              </div>
               <Button type="submit">Save changes</Button>
             </form>
 

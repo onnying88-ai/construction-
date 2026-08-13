@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { AccessDenied } from "@/components/access-denied";
 import { createQuotation, updateQuotation, deleteQuotation } from "@/lib/actions/quotations";
 import { StatusBadge } from "@/components/status-badge";
 import { QUOTATION_STATUS } from "@/lib/status";
@@ -74,6 +76,10 @@ function QuotationFields({ item }: { item?: Quotation }) {
 
 export default async function QuotationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return <AccessDenied module="Quotations" />;
+  }
   const items = await prisma.quotation.findMany({
     where: { projectId },
     include: { attachments: true },

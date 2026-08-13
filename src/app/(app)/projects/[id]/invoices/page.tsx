@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { AccessDenied } from "@/components/access-denied";
 import { createInvoice, updateInvoice, deleteInvoice } from "@/lib/actions/invoices";
 import { StatusBadge } from "@/components/status-badge";
 import { INVOICE_STATUS } from "@/lib/status";
@@ -74,6 +76,10 @@ function InvoiceFields({ item }: { item?: Invoice }) {
 
 export default async function InvoicesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return <AccessDenied module="Invoices" />;
+  }
   const items = await prisma.invoice.findMany({
     where: { projectId },
     include: { attachments: true },

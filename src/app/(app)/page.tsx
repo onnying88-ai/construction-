@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
@@ -10,15 +11,19 @@ import { PlusIcon, AlertTriangleIcon } from "lucide-react";
 export default async function DashboardPage() {
   const now = new Date();
   const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const [projects, overdueInvoices, expiringPermits, delayedSchedule, pendingMaintenance] =
     await Promise.all([
       prisma.project.findMany({ orderBy: { createdAt: "desc" } }),
-      prisma.invoice.findMany({
-        where: { status: { not: "PAID" }, dueDate: { lt: now } },
-        include: { project: true },
-        orderBy: { dueDate: "asc" },
-      }),
+      isAdmin
+        ? prisma.invoice.findMany({
+            where: { status: { not: "PAID" }, dueDate: { lt: now } },
+            include: { project: true },
+            orderBy: { dueDate: "asc" },
+          })
+        : Promise.resolve([]),
       prisma.workPermit.findMany({
         where: { status: "APPROVED", expiryDate: { lte: in30Days } },
         include: { project: true },
