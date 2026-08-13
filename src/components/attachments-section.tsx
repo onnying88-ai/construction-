@@ -11,6 +11,15 @@ import {
 } from "@/lib/actions/attachments";
 import type { Attachment } from "@prisma/client";
 
+const ENTITY_ROUTE: Record<AttachmentEntityType, string> = {
+  QUOTATION: "quotations",
+  INVOICE: "invoices",
+  CONTRACT: "contracts",
+  DRAWING: "drawings",
+  PERMIT: "permits",
+  COST_ENTRY: "costing",
+};
+
 export function AttachmentsSection({
   entityType,
   entityId,
@@ -26,7 +35,7 @@ export function AttachmentsSection({
 }) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const revalidatePathStr = `/projects/${projectId}/${entityType.toLowerCase()}s`;
+  const revalidatePathStr = `/projects/${projectId}/${ENTITY_ROUTE[entityType]}`;
 
   function handleUpload(formData: FormData) {
     startTransition(async () => {

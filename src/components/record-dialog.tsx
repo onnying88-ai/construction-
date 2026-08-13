@@ -20,7 +20,7 @@ export function RecordDialog({
 }: {
   trigger: ReactNode;
   title: string;
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);

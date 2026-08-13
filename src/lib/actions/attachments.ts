@@ -5,7 +5,13 @@ import { requireUser, requireAdmin } from "@/lib/actions/helpers";
 import { uploadFile, deleteFile } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
-export type AttachmentEntityType = "QUOTATION" | "INVOICE" | "CONTRACT" | "DRAWING" | "PERMIT";
+export type AttachmentEntityType =
+  | "QUOTATION"
+  | "INVOICE"
+  | "CONTRACT"
+  | "DRAWING"
+  | "PERMIT"
+  | "COST_ENTRY";
 
 const ADMIN_ONLY_ENTITIES: AttachmentEntityType[] = ["QUOTATION", "INVOICE", "CONTRACT"];
 
@@ -21,6 +27,8 @@ function foreignKeyData(entityType: AttachmentEntityType, entityId: string) {
       return { drawingId: entityId };
     case "PERMIT":
       return { permitId: entityId };
+    case "COST_ENTRY":
+      return { costEntryId: entityId };
   }
 }
 

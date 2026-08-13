@@ -82,6 +82,7 @@ enum AttachmentEntity {
   PERMIT
   MAINTENANCE
   PROJECT
+  COST_ENTRY
 }
 
 model User {
@@ -150,15 +151,16 @@ model ScheduleItem {
 }
 
 model CostEntry {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category    String
   description String?
   type        CostType
-  amount      Decimal  @db.Decimal(14, 2)
+  amount      Decimal      @db.Decimal(14, 2)
   date        DateTime
-  createdAt   DateTime @default(now())
+  createdAt   DateTime     @default(now())
+  attachments Attachment[]
 }
 
 model Quotation {
@@ -262,6 +264,8 @@ model Attachment {
   permit      WorkPermit? @relation(fields: [permitId], references: [id], onDelete: Cascade)
   maintenanceId String?
   maintenance MaintenanceItem? @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  costEntryId String?
+  costEntry   CostEntry? @relation(fields: [costEntryId], references: [id], onDelete: Cascade)
   uploadedById String?
   uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
   uploadedAt   DateTime @default(now())

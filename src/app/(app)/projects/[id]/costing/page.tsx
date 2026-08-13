@@ -5,6 +5,8 @@ import { COST_TYPE } from "@/lib/status";
 import { formatCurrency, formatDate, toDateInputValue } from "@/lib/format";
 import { RecordDialog } from "@/components/record-dialog";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ScanInvoiceDialog } from "@/components/scan-invoice-dialog";
+import { AttachmentsSection } from "@/components/attachments-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +29,8 @@ import {
 } from "@/components/ui/table";
 import { PlusIcon, PencilIcon } from "lucide-react";
 import type { CostEntry } from "@prisma/client";
+
+export const maxDuration = 60;
 
 function CostFields({ item }: { item?: CostEntry }) {
   return (
@@ -69,6 +73,7 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
   const { id: projectId } = await params;
   const items = await prisma.costEntry.findMany({
     where: { projectId },
+    include: { attachments: true },
     orderBy: { date: "desc" },
   });
 
@@ -106,7 +111,8 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
         </Card>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <ScanInvoiceDialog projectId={projectId} />
         <RecordDialog
           title="New Cost Entry"
           action={createCostEntry.bind(null, projectId)}
@@ -169,6 +175,19 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
           )}
         </TableBody>
       </Table>
+
+      {items
+        .filter((item) => item.attachments.length > 0)
+        .map((item) => (
+          <AttachmentsSection
+            key={item.id}
+            entityType="COST_ENTRY"
+            entityId={item.id}
+            projectId={projectId}
+            label={`${item.category} — ${formatCurrency(item.amount.toString())}`}
+            attachments={item.attachments}
+          />
+        ))}
     </div>
   );
 }
