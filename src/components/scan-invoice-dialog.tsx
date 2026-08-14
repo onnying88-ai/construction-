@@ -156,6 +156,18 @@ export function ScanInvoiceDialog({ projectId }: { projectId: string }) {
               </div>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="taxAmount">Tax / SST (RM)</Label>
+              <Input
+                id="taxAmount"
+                name="taxAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={result.guessedTax ?? ""}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"

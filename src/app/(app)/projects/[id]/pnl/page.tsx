@@ -30,10 +30,15 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
     }),
   ]);
 
+  const withTax = (amount: unknown, taxAmount: unknown) => Number(amount) + Number(taxAmount);
+
   const acceptedQuotations = quotations.filter((q) => q.status === "ACCEPTED");
-  const acceptedQuoteTotal = acceptedQuotations.reduce((sum, q) => sum + Number(q.amount), 0);
+  const acceptedQuoteTotal = acceptedQuotations.reduce(
+    (sum, q) => sum + withTax(q.amount, q.taxAmount),
+    0
+  );
   const invoicedTotal = invoices.reduce((sum, i) => sum + Number(i.amount), 0);
-  const actualCostTotal = actualCosts.reduce((sum, c) => sum + Number(c.amount), 0);
+  const actualCostTotal = actualCosts.reduce((sum, c) => sum + withTax(c.amount, c.taxAmount), 0);
 
   const profitVsInvoiced = invoicedTotal - actualCostTotal;
   const marginVsInvoiced = invoicedTotal > 0 ? (profitVsInvoiced / invoicedTotal) * 100 : null;
@@ -42,7 +47,10 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
 
   const costByCategory = new Map<string, number>();
   for (const c of actualCosts) {
-    costByCategory.set(c.category, (costByCategory.get(c.category) ?? 0) + Number(c.amount));
+    costByCategory.set(
+      c.category,
+      (costByCategory.get(c.category) ?? 0) + withTax(c.amount, c.taxAmount)
+    );
   }
   const costRows = Array.from(costByCategory.entries())
     .map(([category, amount]) => ({ category, amount }))
@@ -172,7 +180,9 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
                     <TableCell>
                       <StatusBadge map={QUOTATION_STATUS} status={q.status} />
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(q.amount.toString())}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(withTax(q.amount, q.taxAmount))}
+                    </TableCell>
                   </TableRow>
                 ))}
                 {quotations.length === 0 && (

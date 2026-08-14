@@ -65,6 +65,18 @@ function CostFields({ item }: { item?: CostEntry }) {
         </div>
       </div>
       <div className="space-y-2">
+        <Label htmlFor="taxAmount">Tax / SST (RM)</Label>
+        <Input
+          id="taxAmount"
+          name="taxAmount"
+          type="number"
+          step="0.01"
+          min="0"
+          defaultValue={item?.taxAmount?.toString() ?? ""}
+          placeholder="0.00"
+        />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="date">Date</Label>
         <Input id="date" name="date" type="date" defaultValue={toDateInputValue(item?.date) || undefined} required />
       </div>
@@ -89,19 +101,31 @@ function QuotationFields({ item }: { item?: Quotation }) {
           <Input id="amount" name="amount" type="number" step="0.01" min="0" defaultValue={item?.amount?.toString()} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={item?.status ?? "DRAFT"}>
-            <SelectTrigger id="status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="SENT">Sent</SelectItem>
-              <SelectItem value="ACCEPTED">Accepted</SelectItem>
-              <SelectItem value="REJECTED">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="taxAmount">Tax / SST (RM)</Label>
+          <Input
+            id="taxAmount"
+            name="taxAmount"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={item?.taxAmount?.toString() ?? ""}
+            placeholder="0.00"
+          />
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="status">Status</Label>
+        <Select name="status" defaultValue={item?.status ?? "DRAFT"}>
+          <SelectTrigger id="status" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="SENT">Sent</SelectItem>
+            <SelectItem value="ACCEPTED">Accepted</SelectItem>
+            <SelectItem value="REJECTED">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -114,6 +138,21 @@ function QuotationFields({ item }: { item?: Quotation }) {
         </div>
       </div>
     </>
+  );
+}
+
+function AmountCell({ amount, taxAmount }: { amount: unknown; taxAmount: unknown }) {
+  const subtotal = Number(amount);
+  const tax = Number(taxAmount);
+  return (
+    <div>
+      <div className="font-medium">{formatCurrency(subtotal + tax)}</div>
+      {tax > 0 && (
+        <div className="text-xs text-muted-foreground">
+          {formatCurrency(subtotal)} + {formatCurrency(tax)} tax
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -137,15 +176,17 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
       : Promise.resolve([]),
   ]);
 
+  const withTax = (amount: unknown, taxAmount: unknown) => Number(amount) + Number(taxAmount);
+
   const totalBudget = costItems
     .filter((i) => i.type === "BUDGET")
-    .reduce((sum, i) => sum + Number(i.amount), 0);
+    .reduce((sum, i) => sum + withTax(i.amount, i.taxAmount), 0);
   const totalActual = costItems
     .filter((i) => i.type === "ACTUAL")
-    .reduce((sum, i) => sum + Number(i.amount), 0);
+    .reduce((sum, i) => sum + withTax(i.amount, i.taxAmount), 0);
   const totalAcceptedQuotes = quotationItems
     .filter((q) => q.status === "ACCEPTED")
-    .reduce((sum, q) => sum + Number(q.amount), 0);
+    .reduce((sum, q) => sum + withTax(q.amount, q.taxAmount), 0);
 
   type Row = {
     key: string;
@@ -153,7 +194,7 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
     id: string;
     name: string;
     statusNode: React.ReactNode;
-    amount: string;
+    amountNode: React.ReactNode;
     date: Date;
     attachments: Attachment[];
     editDialog: React.ReactNode;
@@ -169,7 +210,7 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
         kind: "cost",
         name: item.category,
         statusNode: <StatusBadge map={COST_TYPE} status={item.type} />,
-        amount: formatCurrency(item.amount.toString()),
+        amountNode: <AmountCell amount={item.amount} taxAmount={item.taxAmount} />,
         date: item.date,
         attachments: item.attachments,
         editDialog: (
@@ -196,7 +237,7 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
         kind: "quotation",
         name: `${item.quotationNo} — ${item.title}`,
         statusNode: <StatusBadge map={QUOTATION_STATUS} status={item.status} />,
-        amount: formatCurrency(item.amount.toString()),
+        amountNode: <AmountCell amount={item.amount} taxAmount={item.taxAmount} />,
         date: item.issueDate ?? item.createdAt,
         attachments: item.attachments,
         editDialog: (
@@ -302,7 +343,7 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
               </TableCell>
               <TableCell className="font-medium">{row.name}</TableCell>
               <TableCell>{row.statusNode}</TableCell>
-              <TableCell>{row.amount}</TableCell>
+              <TableCell>{row.amountNode}</TableCell>
               <TableCell>{formatDate(row.date)}</TableCell>
               <TableCell className="flex items-center gap-1">
                 {row.editDialog}

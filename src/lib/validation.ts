@@ -43,6 +43,7 @@ export const costEntrySchema = z.object({
   description: optionalString,
   type: z.enum(["BUDGET", "ACTUAL"]),
   amount: requiredAmount,
+  taxAmount: optionalAmount,
   date: requiredDate,
 });
 
@@ -50,6 +51,7 @@ export const quotationSchema = z.object({
   quotationNo: requiredString,
   title: requiredString,
   amount: requiredAmount,
+  taxAmount: optionalAmount,
   status: z.enum(["DRAFT", "SENT", "ACCEPTED", "REJECTED"]),
   issueDate: optionalDate,
   validUntil: optionalDate,

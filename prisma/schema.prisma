@@ -158,6 +158,7 @@ model CostEntry {
   description String?
   type        CostType
   amount      Decimal      @db.Decimal(14, 2)
+  taxAmount   Decimal      @default(0) @db.Decimal(14, 2)
   date        DateTime
   createdAt   DateTime     @default(now())
   attachments Attachment[]
@@ -170,6 +171,7 @@ model Quotation {
   quotationNo String
   title       String
   amount      Decimal         @db.Decimal(14, 2)
+  taxAmount   Decimal         @default(0) @db.Decimal(14, 2)
   status      QuotationStatus @default(DRAFT)
   issueDate   DateTime?
   validUntil  DateTime?

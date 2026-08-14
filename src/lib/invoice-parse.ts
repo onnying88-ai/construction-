@@ -1,4 +1,5 @@
 const TOTAL_KEYWORDS = /(grand total|total amount|amount due|balance due|total due|net total|\btotal\b)/i;
+const TAX_KEYWORDS = /(sst\b|service tax|sales tax|\bgst\b|\btax\b)/i;
 const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
   { pattern: /cement|concrete|sand|aggregate|brick|block/i, category: "Materials" },
   { pattern: /steel|rebar|metal|aluminium|aluminum/i, category: "Materials" },
@@ -20,25 +21,42 @@ function parseAmountToken(token: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const CURRENCY_PATTERN = /(?:RM|MYR|\$)?\s?[\d,]+\.\d{2}/g;
+
+function amountOnLine(line: string): number | null {
+  const matches = line.match(CURRENCY_PATTERN);
+  if (!matches || matches.length === 0) return null;
+  const amount = parseAmountToken(matches[matches.length - 1]);
+  return amount !== null && amount > 0 ? amount : null;
+}
+
 export function extractAmount(text: string): number | null {
   const lines = text.split("\n");
-  const currencyPattern = /(?:RM|MYR|\$)?\s?[\d,]+\.\d{2}/g;
 
   for (const line of lines) {
     if (TOTAL_KEYWORDS.test(line)) {
-      const matches = line.match(currencyPattern);
-      if (matches && matches.length > 0) {
-        const amount = parseAmountToken(matches[matches.length - 1]);
-        if (amount !== null && amount > 0) return amount;
-      }
+      const amount = amountOnLine(line);
+      if (amount !== null) return amount;
     }
   }
 
-  const allMatches = text.match(currencyPattern);
+  const allMatches = text.match(CURRENCY_PATTERN);
   if (!allMatches || allMatches.length === 0) return null;
   const amounts = allMatches.map(parseAmountToken).filter((n): n is number => n !== null && n > 0);
   if (amounts.length === 0) return null;
   return Math.max(...amounts);
+}
+
+/** Looks for a line mentioning SST/service tax/sales tax/GST and returns the amount on it. */
+export function extractTax(text: string): number | null {
+  const lines = text.split("\n");
+  for (const line of lines) {
+    if (TAX_KEYWORDS.test(line) && !TOTAL_KEYWORDS.test(line)) {
+      const amount = amountOnLine(line);
+      if (amount !== null) return amount;
+    }
+  }
+  return null;
 }
 
 const DATE_PATTERNS: { regex: RegExp; parse: (m: RegExpMatchArray) => Date | null }[] = [

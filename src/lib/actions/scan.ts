@@ -4,11 +4,12 @@ import { createWorker } from "tesseract.js";
 import os from "node:os";
 import { requireUser } from "@/lib/actions/helpers";
 import { uploadFile } from "@/lib/storage";
-import { extractAmount, extractDate, guessCategory } from "@/lib/invoice-parse";
+import { extractAmount, extractTax, extractDate, guessCategory } from "@/lib/invoice-parse";
 
 export type ScanResult = {
   rawText: string;
   guessedAmount: number | null;
+  guessedTax: number | null;
   guessedDate: string | null;
   guessedCategory: string;
   photoUrl: string;
@@ -49,9 +50,19 @@ export async function scanInvoice(projectId: string, formData: FormData): Promis
 
   const { url, fileName } = await uploadFile(file, `${projectId}/costing`);
 
+  // The most reliable number OCR finds is the invoice's grand total (tax
+  // included). If a separate tax line is also found, split it out so
+  // "Amount" pre-fills as the subtotal and "Tax" pre-fills on its own —
+  // otherwise put the whole total in Amount and leave Tax for the user.
+  const guessedTotal = extractAmount(text);
+  const guessedTax = extractTax(text);
+  const guessedAmount =
+    guessedTotal !== null && guessedTax !== null ? guessedTotal - guessedTax : guessedTotal;
+
   return {
     rawText: text,
-    guessedAmount: extractAmount(text),
+    guessedAmount,
+    guessedTax,
     guessedDate: extractDate(text),
     guessedCategory: guessCategory(text),
     photoUrl: url,
