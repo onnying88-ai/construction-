@@ -9,6 +9,7 @@ import { RecordDialog } from "@/components/record-dialog";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ScanInvoiceDialog } from "@/components/scan-invoice-dialog";
 import { AttachmentsDialog } from "@/components/attachments-dialog";
+import { AmountCell } from "@/components/amount-cell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -138,21 +139,6 @@ function QuotationFields({ item }: { item?: Quotation }) {
         </div>
       </div>
     </>
-  );
-}
-
-function AmountCell({ amount, taxAmount }: { amount: unknown; taxAmount: unknown }) {
-  const subtotal = Number(amount);
-  const tax = Number(taxAmount);
-  return (
-    <div>
-      <div className="font-medium">{formatCurrency(subtotal + tax)}</div>
-      {tax > 0 && (
-        <div className="text-xs text-muted-foreground">
-          {formatCurrency(subtotal)} + {formatCurrency(tax)} tax
-        </div>
-      )}
-    </div>
   );
 }
 

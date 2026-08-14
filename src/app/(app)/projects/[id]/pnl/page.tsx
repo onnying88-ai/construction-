@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { AccessDenied } from "@/components/access-denied";
 import { StatusBadge } from "@/components/status-badge";
+import { AmountCell } from "@/components/amount-cell";
 import { QUOTATION_STATUS, INVOICE_STATUS } from "@/lib/status";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,26 +31,36 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
     }),
   ]);
 
-  const withTax = (amount: unknown, taxAmount: unknown) => Number(amount) + Number(taxAmount);
+  const num = (v: unknown) => Number(v);
 
+  // Revenue is recognized excluding SST — the tax charged to the client is
+  // collected on behalf of the tax authority and isn't real profit. Cost
+  // stays tax-inclusive, since SST paid on purchases is a real,
+  // non-recoverable expense under Malaysia's SST regime.
   const acceptedQuotations = quotations.filter((q) => q.status === "ACCEPTED");
-  const acceptedQuoteTotal = acceptedQuotations.reduce(
-    (sum, q) => sum + withTax(q.amount, q.taxAmount),
+  const acceptedQuoteSubtotal = acceptedQuotations.reduce((s, q) => s + num(q.amount), 0);
+  const acceptedQuoteTax = acceptedQuotations.reduce((s, q) => s + num(q.taxAmount), 0);
+
+  const invoicedSubtotal = invoices.reduce((s, i) => s + num(i.amount), 0);
+  const invoicedTax = invoices.reduce((s, i) => s + num(i.taxAmount), 0);
+  const invoicedTotal = invoicedSubtotal + invoicedTax;
+
+  const actualCostTotal = actualCosts.reduce(
+    (s, c) => s + num(c.amount) + num(c.taxAmount),
     0
   );
-  const invoicedTotal = invoices.reduce((sum, i) => sum + Number(i.amount), 0);
-  const actualCostTotal = actualCosts.reduce((sum, c) => sum + withTax(c.amount, c.taxAmount), 0);
 
-  const profitVsInvoiced = invoicedTotal - actualCostTotal;
-  const marginVsInvoiced = invoicedTotal > 0 ? (profitVsInvoiced / invoicedTotal) * 100 : null;
-  const profitVsQuote = acceptedQuoteTotal - actualCostTotal;
-  const marginVsQuote = acceptedQuoteTotal > 0 ? (profitVsQuote / acceptedQuoteTotal) * 100 : null;
+  const profitVsInvoiced = invoicedSubtotal - actualCostTotal;
+  const marginVsInvoiced = invoicedSubtotal > 0 ? (profitVsInvoiced / invoicedSubtotal) * 100 : null;
+  const profitVsQuote = acceptedQuoteSubtotal - actualCostTotal;
+  const marginVsQuote =
+    acceptedQuoteSubtotal > 0 ? (profitVsQuote / acceptedQuoteSubtotal) * 100 : null;
 
   const costByCategory = new Map<string, number>();
   for (const c of actualCosts) {
     costByCategory.set(
       c.category,
-      (costByCategory.get(c.category) ?? 0) + withTax(c.amount, c.taxAmount)
+      (costByCategory.get(c.category) ?? 0) + num(c.amount) + num(c.taxAmount)
     );
   }
   const costRows = Array.from(costByCategory.entries())
@@ -59,8 +70,16 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Accepted Quotes" value={formatCurrency(acceptedQuoteTotal)} />
-        <SummaryCard label="Total Invoiced" value={formatCurrency(invoicedTotal)} />
+        <SummaryCard
+          label="Accepted Quotes"
+          value={formatCurrency(acceptedQuoteSubtotal + acceptedQuoteTax)}
+          sub={acceptedQuoteTax > 0 ? `excl. SST: ${formatCurrency(acceptedQuoteSubtotal)}` : undefined}
+        />
+        <SummaryCard
+          label="Total Invoiced"
+          value={formatCurrency(invoicedTotal)}
+          sub={invoicedTax > 0 ? `excl. SST: ${formatCurrency(invoicedSubtotal)}` : undefined}
+        />
         <SummaryCard label="Total Actual Cost" value={formatCurrency(actualCostTotal)} />
         <SummaryCard
           label="Net Profit (vs Invoiced)"
@@ -73,24 +92,43 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
       <Card>
         <CardHeader>
           <CardTitle>Profit &amp; Loss</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            SST charged to the client is excluded from revenue (it&apos;s owed to the tax
+            authority, not profit); SST paid on purchases is kept in cost (it&apos;s not
+            recoverable).
+          </p>
         </CardHeader>
         <CardContent>
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell className="font-medium">Revenue — Total Invoiced</TableCell>
+                <TableCell className="font-medium">Revenue — Total Invoiced (incl. SST)</TableCell>
                 <TableCell className="text-right">{formatCurrency(invoicedTotal)}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="pl-6 text-sm text-muted-foreground">
-                  Memo: Accepted quotation value
-                </TableCell>
+                <TableCell className="pl-6 text-sm text-muted-foreground">Less: SST Charged</TableCell>
                 <TableCell className="text-right text-sm text-muted-foreground">
-                  {formatCurrency(acceptedQuoteTotal)}
+                  ({formatCurrency(invoicedTax)})
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium">Less: Actual Costs</TableCell>
+                <TableCell className="pl-6 text-sm text-muted-foreground">
+                  = Net Revenue (excl. SST)
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  {formatCurrency(invoicedSubtotal)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6 text-sm text-muted-foreground">
+                  Memo: Accepted quotation value (excl. SST)
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  {formatCurrency(acceptedQuoteSubtotal)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Less: Actual Costs (incl. SST paid)</TableCell>
                 <TableCell className="text-right">({formatCurrency(actualCostTotal)})</TableCell>
               </TableRow>
               {costRows.map((row) => (
@@ -145,7 +183,9 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
                     <TableCell>
                       <StatusBadge map={INVOICE_STATUS} status={i.status} />
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(i.amount.toString())}</TableCell>
+                    <TableCell className="text-right">
+                      <AmountCell amount={i.amount} taxAmount={i.taxAmount} />
+                    </TableCell>
                   </TableRow>
                 ))}
                 {invoices.length === 0 && (
@@ -181,7 +221,7 @@ export default async function PnlPage({ params }: { params: Promise<{ id: string
                       <StatusBadge map={QUOTATION_STATUS} status={q.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(withTax(q.amount, q.taxAmount))}
+                      <AmountCell amount={q.amount} taxAmount={q.taxAmount} />
                     </TableCell>
                   </TableRow>
                 ))}

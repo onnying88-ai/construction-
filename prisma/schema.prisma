@@ -185,6 +185,7 @@ model Invoice {
   project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   invoiceNo  String
   amount     Decimal       @db.Decimal(14, 2)
+  taxAmount  Decimal       @default(0) @db.Decimal(14, 2)
   status     InvoiceStatus @default(UNPAID)
   issueDate  DateTime?
   dueDate    DateTime?

@@ -4,10 +4,11 @@ import { AccessDenied } from "@/components/access-denied";
 import { createInvoice, updateInvoice, deleteInvoice } from "@/lib/actions/invoices";
 import { StatusBadge } from "@/components/status-badge";
 import { INVOICE_STATUS } from "@/lib/status";
-import { formatCurrency, formatDate, toDateInputValue } from "@/lib/format";
+import { formatDate, toDateInputValue } from "@/lib/format";
 import { RecordDialog } from "@/components/record-dialog";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { AttachmentsSection } from "@/components/attachments-section";
+import { AmountCell } from "@/components/amount-cell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,19 +43,31 @@ function InvoiceFields({ item }: { item?: Invoice }) {
           <Input id="amount" name="amount" type="number" step="0.01" min="0" defaultValue={item?.amount?.toString()} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={item?.status ?? "UNPAID"}>
-            <SelectTrigger id="status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="UNPAID">Unpaid</SelectItem>
-              <SelectItem value="PARTIAL">Partial</SelectItem>
-              <SelectItem value="PAID">Paid</SelectItem>
-              <SelectItem value="OVERDUE">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="taxAmount">Tax / SST (RM)</Label>
+          <Input
+            id="taxAmount"
+            name="taxAmount"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={item?.taxAmount?.toString() ?? ""}
+            placeholder="0.00"
+          />
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="status">Status</Label>
+        <Select name="status" defaultValue={item?.status ?? "UNPAID"}>
+          <SelectTrigger id="status" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="UNPAID">Unpaid</SelectItem>
+            <SelectItem value="PARTIAL">Partial</SelectItem>
+            <SelectItem value="PAID">Paid</SelectItem>
+            <SelectItem value="OVERDUE">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
@@ -117,7 +130,9 @@ export default async function InvoicesPage({ params }: { params: Promise<{ id: s
           {items.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="font-medium">{item.invoiceNo}</TableCell>
-              <TableCell>{formatCurrency(item.amount.toString())}</TableCell>
+              <TableCell>
+                <AmountCell amount={item.amount} taxAmount={item.taxAmount} />
+              </TableCell>
               <TableCell>
                 <StatusBadge map={INVOICE_STATUS} status={item.status} />
               </TableCell>

@@ -60,6 +60,7 @@ export const quotationSchema = z.object({
 export const invoiceSchema = z.object({
   invoiceNo: requiredString,
   amount: requiredAmount,
+  taxAmount: optionalAmount,
   status: z.enum(["UNPAID", "PARTIAL", "PAID", "OVERDUE"]),
   issueDate: optionalDate,
   dueDate: optionalDate,
