@@ -1,13 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { createCostEntry, updateCostEntry, deleteCostEntry } from "@/lib/actions/cost";
+import { createQuotation, updateQuotation, deleteQuotation } from "@/lib/actions/quotations";
 import { StatusBadge } from "@/components/status-badge";
-import { COST_TYPE } from "@/lib/status";
+import { COST_TYPE, QUOTATION_STATUS } from "@/lib/status";
 import { formatCurrency, formatDate, toDateInputValue } from "@/lib/format";
 import { RecordDialog } from "@/components/record-dialog";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ScanInvoiceDialog } from "@/components/scan-invoice-dialog";
-import { AttachmentsSection } from "@/components/attachments-section";
+import { AttachmentsDialog } from "@/components/attachments-dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusIcon, PencilIcon } from "lucide-react";
-import type { CostEntry } from "@prisma/client";
+import type { CostEntry, Quotation, Attachment } from "@prisma/client";
 
 export const maxDuration = 60;
 
@@ -69,24 +72,155 @@ function CostFields({ item }: { item?: CostEntry }) {
   );
 }
 
+function QuotationFields({ item }: { item?: Quotation }) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="quotationNo">Quotation No.</Label>
+        <Input id="quotationNo" name="quotationNo" defaultValue={item?.quotationNo} required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="title">Title</Label>
+        <Input id="title" name="title" defaultValue={item?.title} required />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount (RM)</Label>
+          <Input id="amount" name="amount" type="number" step="0.01" min="0" defaultValue={item?.amount?.toString()} required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <Select name="status" defaultValue={item?.status ?? "DRAFT"}>
+            <SelectTrigger id="status" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="SENT">Sent</SelectItem>
+              <SelectItem value="ACCEPTED">Accepted</SelectItem>
+              <SelectItem value="REJECTED">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="issueDate">Issue date</Label>
+          <Input id="issueDate" name="issueDate" type="date" defaultValue={toDateInputValue(item?.issueDate)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="validUntil">Valid until</Label>
+          <Input id="validUntil" name="validUntil" type="date" defaultValue={toDateInputValue(item?.validUntil)} />
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function CostingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
-  const items = await prisma.costEntry.findMany({
-    where: { projectId },
-    include: { attachments: true },
-    orderBy: { date: "desc" },
-  });
+  const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
 
-  const totalBudget = items
+  const [costItems, quotationItems] = await Promise.all([
+    prisma.costEntry.findMany({
+      where: { projectId },
+      include: { attachments: true },
+      orderBy: { date: "desc" },
+    }),
+    isAdmin
+      ? prisma.quotation.findMany({
+          where: { projectId },
+          include: { attachments: true },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const totalBudget = costItems
     .filter((i) => i.type === "BUDGET")
     .reduce((sum, i) => sum + Number(i.amount), 0);
-  const totalActual = items
+  const totalActual = costItems
     .filter((i) => i.type === "ACTUAL")
     .reduce((sum, i) => sum + Number(i.amount), 0);
+  const totalAcceptedQuotes = quotationItems
+    .filter((q) => q.status === "ACCEPTED")
+    .reduce((sum, q) => sum + Number(q.amount), 0);
+
+  type Row = {
+    key: string;
+    kind: "cost" | "quotation";
+    id: string;
+    name: string;
+    statusNode: React.ReactNode;
+    amount: string;
+    date: Date;
+    attachments: Attachment[];
+    editDialog: React.ReactNode;
+    deleteAction: (formData: FormData) => Promise<void>;
+    confirmMessage: string;
+  };
+
+  const rows: Row[] = [
+    ...costItems.map(
+      (item): Row => ({
+        key: `cost-${item.id}`,
+        id: item.id,
+        kind: "cost",
+        name: item.category,
+        statusNode: <StatusBadge map={COST_TYPE} status={item.type} />,
+        amount: formatCurrency(item.amount.toString()),
+        date: item.date,
+        attachments: item.attachments,
+        editDialog: (
+          <RecordDialog
+            title="Edit Cost Entry"
+            action={updateCostEntry.bind(null, item.id, projectId)}
+            trigger={
+              <Button variant="ghost" size="icon-sm">
+                <PencilIcon className="size-4" />
+              </Button>
+            }
+          >
+            <CostFields item={item} />
+          </RecordDialog>
+        ),
+        deleteAction: deleteCostEntry.bind(null, item.id, projectId),
+        confirmMessage: "Delete this cost entry?",
+      })
+    ),
+    ...quotationItems.map(
+      (item): Row => ({
+        key: `quotation-${item.id}`,
+        id: item.id,
+        kind: "quotation",
+        name: `${item.quotationNo} — ${item.title}`,
+        statusNode: <StatusBadge map={QUOTATION_STATUS} status={item.status} />,
+        amount: formatCurrency(item.amount.toString()),
+        date: item.issueDate ?? item.createdAt,
+        attachments: item.attachments,
+        editDialog: (
+          <RecordDialog
+            title="Edit Quotation"
+            action={updateQuotation.bind(null, item.id, projectId)}
+            trigger={
+              <Button variant="ghost" size="icon-sm">
+                <PencilIcon className="size-4" />
+              </Button>
+            }
+          >
+            <QuotationFields item={item} />
+          </RecordDialog>
+        ),
+        deleteAction: deleteQuotation.bind(null, item.id, projectId),
+        confirmMessage: "Delete this quotation?",
+      })
+    ),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">Total Budget</CardTitle>
@@ -109,9 +243,17 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
             {formatCurrency(totalBudget - totalActual)}
           </CardContent>
         </Card>
+        {isAdmin && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Accepted Quotes</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xl font-semibold">{formatCurrency(totalAcceptedQuotes)}</CardContent>
+          </Card>
+        )}
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <ScanInvoiceDialog projectId={projectId} />
         <RecordDialog
           title="New Cost Entry"
@@ -125,69 +267,69 @@ export default async function CostingPage({ params }: { params: Promise<{ id: st
         >
           <CostFields />
         </RecordDialog>
+        {isAdmin && (
+          <RecordDialog
+            title="New Quotation"
+            action={createQuotation.bind(null, projectId)}
+            trigger={
+              <Button variant="outline">
+                <PlusIcon className="size-4" />
+                New Quotation
+              </Button>
+            }
+          >
+            <QuotationFields />
+          </RecordDialog>
+        )}
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Category</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead className="w-20" />
+            <TableHead className="w-32" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.category}</TableCell>
+          {rows.map((row) => (
+            <TableRow key={row.key}>
               <TableCell>
-                <StatusBadge map={COST_TYPE} status={item.type} />
+                <Badge variant="secondary">{row.kind === "cost" ? "Cost" : "Quotation"}</Badge>
               </TableCell>
-              <TableCell>{formatCurrency(item.amount.toString())}</TableCell>
-              <TableCell>{formatDate(item.date)}</TableCell>
+              <TableCell className="font-medium">{row.name}</TableCell>
+              <TableCell>{row.statusNode}</TableCell>
+              <TableCell>{row.amount}</TableCell>
+              <TableCell>{formatDate(row.date)}</TableCell>
               <TableCell className="flex items-center gap-1">
-                <RecordDialog
-                  title="Edit Cost Entry"
-                  action={updateCostEntry.bind(null, item.id, projectId)}
-                  trigger={
-                    <Button variant="ghost" size="icon-sm">
-                      <PencilIcon className="size-4" />
-                    </Button>
-                  }
-                >
-                  <CostFields item={item} />
-                </RecordDialog>
-                <form action={deleteCostEntry.bind(null, item.id, projectId)}>
-                  <ConfirmSubmitButton variant="ghost" size="sm" confirmMessage="Delete this cost entry?">
+                {row.editDialog}
+                <AttachmentsDialog
+                  entityType={row.kind === "cost" ? "COST_ENTRY" : "QUOTATION"}
+                  entityId={row.id}
+                  projectId={projectId}
+                  label={row.name}
+                  attachments={row.attachments}
+                />
+                <form action={row.deleteAction}>
+                  <ConfirmSubmitButton variant="ghost" size="sm" confirmMessage={row.confirmMessage}>
                     Delete
                   </ConfirmSubmitButton>
                 </form>
               </TableCell>
             </TableRow>
           ))}
-          {items.length === 0 && (
+          {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
-                No cost entries yet.
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
+                No cost entries or quotations yet.
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
-
-      {items
-        .filter((item) => item.attachments.length > 0)
-        .map((item) => (
-          <AttachmentsSection
-            key={item.id}
-            entityType="COST_ENTRY"
-            entityId={item.id}
-            projectId={projectId}
-            label={`${item.category} — ${formatCurrency(item.amount.toString())}`}
-            attachments={item.attachments}
-          />
-        ))}
     </div>
   );
 }

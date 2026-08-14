@@ -51,8 +51,7 @@ export default async function ProjectOverviewPage({
 
   const summary = [
     { label: "Schedule items", count: scheduleCount, href: `/projects/${id}/schedule` },
-    { label: "Cost entries", count: costCount, href: `/projects/${id}/costing` },
-    { label: "Quotations", count: quotationCount, href: `/projects/${id}/quotations` },
+    { label: "Costing & Quotations", count: costCount + quotationCount, href: `/projects/${id}/costing` },
     { label: "Invoices", count: invoiceCount, href: `/projects/${id}/invoices` },
     { label: "Contracts", count: contractCount, href: `/projects/${id}/contracts` },
     { label: "Drawings", count: drawingCount, href: `/projects/${id}/drawings` },
