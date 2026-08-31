@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PaperclipIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { AttachmentsSection } from "@/components/attachments-section";
 import type { AttachmentEntityType } from "@/lib/actions/attachments";
 import type { Attachment } from "@prisma/client";
@@ -25,14 +25,10 @@ export function AttachmentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button variant="ghost" size="sm">
-            <PaperclipIcon className="size-3.5" />
-            {attachments.length > 0 ? attachments.length : ""}
-          </Button>
-        }
-      />
+      <DialogTrigger className={buttonVariants({ variant: "ghost", size: "sm" })}>
+        <PaperclipIcon className="size-3.5" />
+        {attachments.length > 0 ? attachments.length : ""}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Documents</DialogTitle>

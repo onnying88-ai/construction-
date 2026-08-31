@@ -11,7 +11,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,14 +74,10 @@ export function ScanInvoiceDialog({ projectId }: { projectId: string }) {
         if (!next) reset();
       }}
     >
-      <DialogTrigger
-        render={
-          <Button variant="outline">
-            <ScanLineIcon className="size-4" />
-            Scan Invoice
-          </Button>
-        }
-      />
+      <DialogTrigger className={buttonVariants({ variant: "outline" })}>
+        <ScanLineIcon className="size-4" />
+        Scan Invoice
+      </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Scan Invoice</DialogTitle>
