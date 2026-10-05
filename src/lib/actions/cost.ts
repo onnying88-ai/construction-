@@ -11,6 +11,7 @@ export async function createCostEntry(projectId: string, formData: FormData) {
   const entry = await prisma.costEntry.create({ data: { ...data, projectId } });
   revalidatePath(`/projects/${projectId}/costing`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
   return entry.id;
 }
 
@@ -20,6 +21,7 @@ export async function updateCostEntry(id: string, projectId: string, formData: F
   await prisma.costEntry.update({ where: { id }, data });
   revalidatePath(`/projects/${projectId}/costing`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
 }
 
 export async function deleteCostEntry(id: string, projectId: string) {
@@ -27,6 +29,7 @@ export async function deleteCostEntry(id: string, projectId: string) {
   await prisma.costEntry.delete({ where: { id } });
   revalidatePath(`/projects/${projectId}/costing`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
 }
 
 export async function attachScannedPhoto(

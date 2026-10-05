@@ -10,11 +10,11 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ScanInvoiceDialog } from "@/components/scan-invoice-dialog";
 import { AttachmentsDialog } from "@/components/attachments-dialog";
 import { AmountCell } from "@/components/amount-cell";
+import { CostFields } from "@/components/cost-fields";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -32,58 +32,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusIcon, PencilIcon } from "lucide-react";
-import type { CostEntry, Quotation, Attachment } from "@prisma/client";
+import type { Quotation, Attachment } from "@prisma/client";
 
 export const maxDuration = 60;
-
-function CostFields({ item }: { item?: CostEntry }) {
-  return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
-        <Input id="category" name="category" defaultValue={item?.category} required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" name="description" rows={2} defaultValue={item?.description ?? ""} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Type</Label>
-          <Select name="type" defaultValue={item?.type ?? "BUDGET"}>
-            <SelectTrigger id="type" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="BUDGET">Budget</SelectItem>
-              <SelectItem value="ACTUAL">Actual</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount (RM)</Label>
-          <Input id="amount" name="amount" type="number" step="0.01" min="0" defaultValue={item?.amount?.toString()} required />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="taxAmount">Tax / SST (RM)</Label>
-        <Input
-          id="taxAmount"
-          name="taxAmount"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={item?.taxAmount?.toString() ?? ""}
-          placeholder="0.00"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="date">Date</Label>
-        <Input id="date" name="date" type="date" defaultValue={toDateInputValue(item?.date) || undefined} required />
-      </div>
-    </>
-  );
-}
 
 function QuotationFields({ item }: { item?: Quotation }) {
   return (

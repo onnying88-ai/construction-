@@ -11,6 +11,7 @@ export async function createInvoice(projectId: string, formData: FormData) {
   await prisma.invoice.create({ data: { ...data, projectId } });
   revalidatePath(`/projects/${projectId}/invoices`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
   revalidatePath("/");
 }
 
@@ -20,6 +21,7 @@ export async function updateInvoice(id: string, projectId: string, formData: For
   await prisma.invoice.update({ where: { id }, data });
   revalidatePath(`/projects/${projectId}/invoices`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
   revalidatePath("/");
 }
 
@@ -28,5 +30,6 @@ export async function deleteInvoice(id: string, projectId: string) {
   await prisma.invoice.delete({ where: { id } });
   revalidatePath(`/projects/${projectId}/invoices`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
   revalidatePath("/");
 }

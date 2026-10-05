@@ -11,6 +11,7 @@ export async function createQuotation(projectId: string, formData: FormData) {
   await prisma.quotation.create({ data: { ...data, projectId } });
   revalidatePath(`/projects/${projectId}/quotations`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
 }
 
 export async function updateQuotation(id: string, projectId: string, formData: FormData) {
@@ -19,6 +20,7 @@ export async function updateQuotation(id: string, projectId: string, formData: F
   await prisma.quotation.update({ where: { id }, data });
   revalidatePath(`/projects/${projectId}/quotations`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
 }
 
 export async function deleteQuotation(id: string, projectId: string) {
@@ -26,4 +28,5 @@ export async function deleteQuotation(id: string, projectId: string) {
   await prisma.quotation.delete({ where: { id } });
   revalidatePath(`/projects/${projectId}/quotations`);
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/summary");
 }
