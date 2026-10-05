@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,9 @@ import {
 } from "@/lib/actions/masterlist";
 
 export function ImportMasterlist() {
-  const fileRef = useRef<HTMLInputElement>(null);
+  // React clears the <input type="file"> once the Preview form action finishes,
+  // so keep our own reference to the chosen file for the Import step.
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -26,6 +28,7 @@ export function ImportMasterlist() {
 
   function handleRead(formData: FormData) {
     setResult(null);
+    const chosen = formData.get("file");
     startRead(async () => {
       const res = await previewMasterlist(formData);
       if (res.error) {
@@ -33,14 +36,17 @@ export function ImportMasterlist() {
         setPreview(null);
         return;
       }
+      setFile(chosen instanceof File ? chosen : null);
       setPreview(res);
       setMapping(Object.fromEntries((res.rows ?? []).map((r) => [r.code, r.suggestedProjectId ?? "new"])));
     });
   }
 
   function handleImport() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
+    if (!file) {
+      toast.error("Please choose the masterlist file again and press Preview.");
+      return;
+    }
     const formData = new FormData();
     formData.set("file", file);
     formData.set("mapping", JSON.stringify(mapping));
@@ -75,7 +81,7 @@ export function ImportMasterlist() {
           <form action={handleRead} className="flex flex-wrap items-end gap-3">
             <div className="space-y-2">
               <Label htmlFor="file">Masterlist (.xlsx)</Label>
-              <Input ref={fileRef} id="file" name="file" type="file" accept=".xlsx" required />
+              <Input id="file" name="file" type="file" accept=".xlsx" required />
             </div>
             <Button type="submit" disabled={reading}>
               {reading ? (
