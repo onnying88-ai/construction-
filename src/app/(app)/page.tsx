@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { PROJECT_STATUS } from "@/lib/status";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { PlusIcon, AlertTriangleIcon } from "lucide-react";
+import { PlusIcon, AlertTriangleIcon, UploadIcon } from "lucide-react";
 
 export default async function DashboardPage() {
   const now = new Date();
@@ -54,10 +54,18 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button render={<Link href="/projects/new" />} nativeButton={false}>
-          <PlusIcon className="size-4" />
-          New Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="outline" render={<Link href="/import" />} nativeButton={false}>
+              <UploadIcon className="size-4" />
+              Import Masterlist
+            </Button>
+          )}
+          <Button render={<Link href="/projects/new" />} nativeButton={false}>
+            <PlusIcon className="size-4" />
+            New Project
+          </Button>
+        </div>
       </div>
 
       {hasAlerts && (
